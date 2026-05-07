@@ -1,0 +1,6 @@
+
+.env
+__pycache__/
+store_prices.csv
+*.pyc
+
