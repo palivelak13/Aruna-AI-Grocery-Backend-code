@@ -1,80 +1,69 @@
-
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-from streamlit_autorefresh import st_autorefresh
 
 # -----------------------------
 # PAGE CONFIG
 # -----------------------------
 st.set_page_config(
-    page_title="AI Grocery Dashboard",
+    page_title="Aruna-AI-Grocery",
     layout="wide"
-)
-
-# -----------------------------
-# AUTO REFRESH
-# -----------------------------
-st_autorefresh(
-    interval=60000,
-    key="refresh"
 )
 
 # -----------------------------
 # TITLE
 # -----------------------------
-st.title("🛒 AI Grocery Dashboard")
+st.title("🛒 Aruna-AI-Grocery Dashboard")
+
+# -----------------------------
+# FORCE CLEAR CACHE
+# -----------------------------
+st.cache_data.clear()
 
 # -----------------------------
 # LOAD CSV
 # -----------------------------
 try:
-
     df = pd.read_csv("store_prices.csv")
-
 except Exception as e:
-
     st.error(f"CSV Error: {e}")
-
     st.stop()
 
 # -----------------------------
-# EMPTY FILE CHECK
+# SHOW DEBUG
 # -----------------------------
-if df.empty:
+st.write("Rows Loaded:", len(df))
 
-    st.warning("No grocery data available")
-
+# -----------------------------
+# EMPTY CHECK
+# -----------------------------
+if len(df) == 0:
+    st.warning("No grocery data found")
     st.stop()
 
 # -----------------------------
 # CLEAN DATA
 # -----------------------------
-df = df.drop_duplicates()
+df['item'] = df['item'].astype(str)
+df['store'] = df['store'].astype(str)
 
-# Ensure price numeric
 df['price'] = pd.to_numeric(
     df['price'],
     errors='coerce'
 )
 
-df = df.dropna()
+df = df.dropna(subset=['price'])
 
 # -----------------------------
-# SIDEBAR SEARCH
+# SEARCH BAR
 # -----------------------------
-st.sidebar.header("🔍 Grocery Search")
-
-search = st.sidebar.text_input(
-    "Enter item name",
-    ""
+search = st.text_input(
+    "🔍 Search Grocery Item"
 )
 
 # -----------------------------
 # FILTER
 # -----------------------------
 if search:
-
     filtered = df[
         df['item'].str.contains(
             search,
@@ -82,9 +71,7 @@ if search:
             na=False
         )
     ]
-
 else:
-
     filtered = df
 
 # -----------------------------
@@ -108,7 +95,7 @@ col3.metric(
 )
 
 # -----------------------------
-# AVAILABLE ITEMS
+# ITEMS
 # -----------------------------
 st.header("📦 Grocery Items")
 
@@ -131,7 +118,7 @@ st.dataframe(
 )
 
 # -----------------------------
-# CHEAPEST STORE
+# CHEAPEST PRICES
 # -----------------------------
 st.header("💰 Cheapest Prices")
 
@@ -141,35 +128,6 @@ cheap = comparison.sort_values(
 
 st.dataframe(
     cheap,
-    use_container_width=True
-)
-
-# -----------------------------
-# GRAPH
-# -----------------------------
-st.header("📈 Grocery Trends")
-
-fig, ax = plt.subplots(figsize=(10, 5))
-
-for item in filtered['item'].unique():
-
-    item_df = filtered[
-        filtered['item'] == item
-    ]
-
-    ax.plot(
-        item_df.index,
-        item_df['price'],
-        label=item
-    )
-
-ax.set_xlabel("Records")
-ax.set_ylabel("Price ₹")
-
-ax.legend()
-
-st.pyplot(
-    fig,
     use_container_width=True
 )
 

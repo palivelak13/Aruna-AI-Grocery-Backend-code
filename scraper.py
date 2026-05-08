@@ -1,152 +1,79 @@
-
 from playwright.sync_api import sync_playwright
-from config import SOURCES
-
-import pandas as pd
 import re
+import pandas as pd
 import os
 from datetime import datetime
 
-
 STORE_FILE = "store_prices.csv"
 
+SOURCES = [
+    "https://www.bigbasket.com/ps/?q={}",
+    "https://www.blinkit.com/s/?q={}"
+]
 
-# -----------------------------
-# SAVE DATA
-# -----------------------------
 def save_store_data(item, store, prices):
 
     rows = []
 
-    for p in prices:
-
+    for value in prices:
         try:
-
-            value = int(
-                re.sub(r"[₹, ]", "", p)
-            )
+            clean_price = re.sub(r"[^\d]", "", value)
+            if clean_price == "":
+                continue
 
             rows.append({
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "item": item,
                 "store": store,
-                "price": value
+                "price": int(clean_price)
             })
-
         except:
             continue
 
-    if len(rows) == 0:
-        return
-
     df = pd.DataFrame(rows)
 
-    # -----------------------------
-    # SAFE CSV LOAD
-    # -----------------------------
+    if len(df) == 0:
+        return
+
     if os.path.exists(STORE_FILE):
+        old = pd.read_csv(STORE_FILE)
+        df = pd.concat([old, df], ignore_index=True)
 
-        try:
-
-            if os.path.getsize(STORE_FILE) > 0:
-
-                old = pd.read_csv(STORE_FILE)
-
-                df = pd.concat(
-                    [old, df],
-                    ignore_index=True
-                )
-
-        except Exception as e:
-
-            print("CSV Read Error:", e)
-
-    # -----------------------------
-    # SAVE CSV
-    # -----------------------------
-    df.to_csv(
-        STORE_FILE,
-        index=False
-    )
+    df.to_csv(STORE_FILE, index=False)
 
 
-# -----------------------------
-# SCRAPER
-# -----------------------------
 def get_prices(item):
 
     all_prices = []
 
     with sync_playwright() as p:
-
-        browser = p.chromium.launch(
-            headless=True
-        )
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
         for src in SOURCES:
-
-            page = browser.new_page()
-
             try:
-
                 url = src.format(item)
-
                 print("Scraping:", url)
 
-                page.goto(
-                    url,
-                    timeout=60000
-                )
+                page.goto(url, timeout=60000)
+                page.wait_for_timeout(3000)
 
-                page.wait_for_timeout(5000)
+                text = page.inner_text("body")
 
-                text = page.locator(
-                    "body"
-                ).inner_text()
+                matches = re.findall(r'₹\s?\d+', text)
 
-                matches = re.findall(
-                    r'₹\s?\d+',
-                    text
-                )
-
-                prices = matches[:10]
-
-                print("Found:", prices[:5])
-
-                # Detect store
                 if "bigbasket" in url:
-
                     store = "BigBasket"
-
-                elif "blinkit" in url:
-
+                else:
                     store = "Blinkit"
 
-                else:
+                save_store_data(item, store, matches)
 
-                    store = "Unknown"
-
-                # Save data
-                save_store_data(
-                    item,
-                    store,
-                    prices
-                )
-
-                all_prices.extend(prices)
+                all_prices.extend(matches)
 
             except Exception as e:
-
-                print(
-                    f"Error occurred while scraping {item} from {src}:",
-                    e
-                )
-
-            finally:
-
-                page.close()
+                print("Scraping error:", e)
 
         browser.close()
 
-    return list(set(all_prices))
-
+    return all_prices
