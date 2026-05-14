@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+} from "react";
+
 import {
   View,
   Text,
@@ -9,152 +14,450 @@ import {
   Linking,
   TextInput,
   Dimensions,
+  Alert,
 } from "react-native";
 
-import { BarChart } from "react-native-chart-kit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import {
+  BarChart,
+  LineChart,
+} from "react-native-chart-kit";
+
+const API_URL =
+  "http://192.168.1.109:8000";
 
 export default function HomeScreen() {
 
-  const [groupedData, setGroupedData] = useState<any>({});
-  const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState("");
-  const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<any[]>([]);
+  const [groupedData, setGroupedData] =
+    useState<any>({});
+
+  const [trendData, setTrendData] =
+    useState<number[]>([
+      100,
+      108,
+      115,
+      120,
+      126,
+      130,
+      135,
+    ]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [selectedItem, setSelectedItem] =
+    useState("rice");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [cart, setCart] =
+    useState<any[]>([]);
+
+  const [lastUpdated, setLastUpdated] =
+    useState("");
+
+  // =====================================
+  // CATEGORY SYSTEM
+  // =====================================
+
+  const categories: any = {
+
+    "🥫 Grocery": [
+      "rice",
+      "atta",
+      "bread",
+      "tea",
+      "coffee",
+      "salt",
+      "sugar",
+      "dal",
+      "oil",
+      "ghee",
+      "butter",
+      "jam",
+      "biscuits",
+      "noodles",
+      "pasta",
+      "oats",
+    ],
+
+    "🥦 Vegetables": [
+      "onion",
+      "potato",
+      "tomato",
+      "carrot",
+      "cabbage",
+      "beans",
+      "capsicum",
+      "spinach",
+      "garlic",
+      "ginger",
+      "peas",
+      "broccoli",
+    ],
+
+    "🍎 Fruits": [
+      "apple",
+      "banana",
+      "orange",
+      "grapes",
+      "watermelon",
+      "papaya",
+      "mango",
+      "pineapple",
+    ],
+
+    "🥛 Dairy": [
+      "milk",
+      "curd",
+      "paneer",
+      "cheese",
+      "yogurt",
+    ],
+
+    "🍗 Non Veg": [
+      "eggs",
+      "chicken",
+      "fish",
+      "mutton",
+    ],
+
+    "🍫 Snacks": [
+      "chips",
+      "juice",
+      "soft drink",
+      "ice cream",
+      "chocolate",
+    ],
+
+    "🧴 Personal Care": [
+      "soap",
+      "shampoo",
+      "toothpaste",
+      "face wash",
+    ],
+
+  };
+
+  // =====================================
+  // LOAD CART
+  // =====================================
 
   useEffect(() => {
 
-    fetch("http://192.168.0.100:8000/prices")
-      .then((res) => res.json())
-      .then((json) => {
+    const loadCart = async () => {
 
-        const grouped: any = {};
+      try {
 
-        json.forEach((item: any) => {
+        const saved =
+          await AsyncStorage.getItem(
+            "cart"
+          );
 
-          if (!grouped[item.item]) {
-            grouped[item.item] = [];
-          }
+        if (saved) {
 
-          grouped[item.item].push({
-            ...item,
-
-            delivery:
-              Math.floor(Math.random() * 20) + 5,
-
-            stock:
-              Math.random() > 0.3
-                ? "In Stock"
-                : "Low Stock",
-
-            trend:
-              Math.random() > 0.5
-                ? "Price Dropped"
-                : "High Demand",
-
-            rating:
-              (Math.random() * 2 + 3).toFixed(1),
-
-          });
-
-        });
-
-        setGroupedData(grouped);
-
-        const firstItem = Object.keys(grouped)[0];
-
-        setSelectedItem(firstItem);
-
-        setLoading(false);
-
-      })
-      .catch((err) => {
-        console.log(err);
-        setLoading(false);
-      });
-
-  }, []);
-
-  if (loading) {
-
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text>Loading...</Text>
-      </View>
-    );
-
-  }
-
-  const groceryItems = [
-    "rice",
-    "wheat",
-    "dal",
-    "bread",
-    "tea",
-    "coffee",
-    "sugar",
-    "salt",
-    "paneer",
-  ];
-
-  const vegetables = [
-    "onion",
-    "potato",
-    "tomato",
-    "carrot",
-    "apple",
-    "banana",
-    "orange",
-  ];
-
-  const nonVeg = [
-    "chicken",
-    "eggs",
-    "milk",
-  ];
-
-  const stores = groupedData[selectedItem] || [];
-
-  const cheapest = stores.reduce(
-    (min: any, current: any) =>
-      current.price < min.price ? current : min,
-    stores[0]
-  );
-
-  const prices = stores.map(
-    (s: any) => Number(s.price)
-  );
-
-  const highestPrice = Math.max(...prices);
-
-  const lowestPrice = Math.min(...prices);
-
-  const savings = highestPrice - lowestPrice;
-
-  const addToCart = () => {
-
-    const itemExists = cart.find(
-      (i) => i.item === selectedItem
-    );
-
-    if (itemExists) {
-
-      const updatedCart = cart.map((i) => {
-
-        if (i.item === selectedItem) {
-
-          return {
-            ...i,
-            quantity: i.quantity + 1,
-          };
+          setCart(JSON.parse(saved));
 
         }
 
-        return i;
+      } catch (err) {
+
+        console.log(err);
+
+      }
+
+    };
+
+    loadCart();
+
+  }, []);
+
+  // =====================================
+  // SAVE CART
+  // =====================================
+
+  useEffect(() => {
+
+    AsyncStorage.setItem(
+      "cart",
+      JSON.stringify(cart)
+    );
+
+  }, [cart]);
+
+  // =====================================
+  // FETCH PRICES
+  // =====================================
+
+  const fetchPrices = async () => {
+
+    try {
+
+      if (
+        Object.keys(groupedData)
+          .length === 0
+      ) {
+        setLoading(true);
+      }
+
+      const res = await fetch(
+        `${API_URL}/prices/`
+      );
+
+      const json =
+        await res.json();
+
+      const grouped: any = {};
+
+      json.forEach((item: any) => {
+
+        const itemName =
+          item.item
+            ?.toLowerCase()
+            ?.trim();
+
+        if (!grouped[itemName]) {
+
+          grouped[itemName] = [];
+
+        }
+
+        grouped[itemName].push(item);
 
       });
 
-      setCart(updatedCart);
+      setGroupedData(grouped);
+
+      setLastUpdated(
+        new Date().toLocaleTimeString()
+      );
+
+      setLoading(false);
+
+    } catch (err) {
+
+      console.log(err);
+
+      Alert.alert(
+        "Backend Error",
+        "Cannot connect to backend"
+      );
+
+      setLoading(false);
+
+    }
+
+  };
+
+  // =====================================
+  // FETCH TREND
+  // =====================================
+
+  const fetchTrend = async (
+    item: string
+  ) => {
+
+    try {
+
+      const res = await fetch(
+        `${API_URL}/trend/${item}`
+      );
+
+      const json =
+        await res.json();
+
+      const base =
+        Number(
+          json?.prediction
+        ) || 100;
+
+      setTrendData([
+        base - 15,
+        base - 10,
+        base - 5,
+        base,
+        base + 5,
+        base + 10,
+        base + 15,
+      ]);
+
+    } catch (err) {
+
+      console.log(err);
+
+    }
+
+  };
+
+  // =====================================
+  // INITIAL LOAD
+  // =====================================
+
+  useEffect(() => {
+
+    fetchPrices();
+
+  }, []);
+
+  // =====================================
+  // AUTO REFRESH
+  // =====================================
+
+  useEffect(() => {
+
+    const interval =
+      setInterval(() => {
+
+        fetchPrices();
+
+      }, 60000);
+
+    return () =>
+      clearInterval(interval);
+
+  }, []);
+
+  // =====================================
+  // TREND UPDATE
+  // =====================================
+
+  useEffect(() => {
+
+    if (selectedItem) {
+
+      fetchTrend(selectedItem);
+
+    }
+
+  }, [selectedItem]);
+
+  // =====================================
+  // STORES
+  // =====================================
+
+  const stores =
+    groupedData[selectedItem] || [];
+
+  const cheapest =
+    stores.length > 0
+      ? stores.reduce(
+          (
+            min: any,
+            current: any
+          ) =>
+            current.price <
+            min.price
+              ? current
+              : min,
+          stores[0]
+        )
+      : null;
+
+  const prices =
+    stores.map((s: any) =>
+      Number(s.price)
+    ) || [0];
+
+  const highestPrice =
+    prices.length > 0
+      ? Math.max(...prices)
+      : 0;
+
+  const lowestPrice =
+    prices.length > 0
+      ? Math.min(...prices)
+      : 0;
+
+  const savings =
+    highestPrice - lowestPrice;
+
+  // =====================================
+  // FILTER SEARCH
+  // =====================================
+
+  const filteredCategories =
+    Object.entries(categories).map(
+      ([category, items]: any) => {
+
+        return {
+          category,
+          items: items.filter(
+            (item: string) =>
+              item
+                .toLowerCase()
+                .includes(
+                  search.toLowerCase()
+                )
+          ),
+        };
+
+      }
+    );
+
+  // =====================================
+  // TOTAL
+  // =====================================
+
+  const totalAmount = useMemo(() => {
+
+    return cart.reduce(
+      (
+        sum: number,
+        item: any
+      ) =>
+        sum +
+        item.price *
+          item.quantity,
+      0
+    );
+
+  }, [cart]);
+
+  // =====================================
+  // ADD TO CART
+  // =====================================
+
+  const addToCart = () => {
+
+    if (!cheapest) {
+
+      Alert.alert(
+        "No Item Selected"
+      );
+
+      return;
+
+    }
+
+    const exists = cart.find(
+      (i) =>
+        i.item === selectedItem
+    );
+
+    if (exists) {
+
+      const updated =
+        cart.map((i) => {
+
+          if (
+            i.item === selectedItem
+          ) {
+
+            return {
+              ...i,
+              quantity:
+                i.quantity + 1,
+            };
+
+          }
+
+          return i;
+
+        });
+
+      setCart(updated);
 
     } else {
 
@@ -162,53 +465,126 @@ export default function HomeScreen() {
         ...cart,
         {
           item: selectedItem,
-          price: lowestPrice,
-          store: cheapest.store,
+          store:
+            cheapest.store,
+          price:
+            cheapest.price,
           quantity: 1,
         },
       ]);
 
     }
 
+    Alert.alert(
+      "Added To Cart",
+      `${selectedItem.toUpperCase()} added`
+    );
+
   };
 
-  const filteredGrocery = groceryItems.filter((item) =>
-    item.toLowerCase().includes(search.toLowerCase())
-  );
+  // =====================================
+  // QUANTITY
+  // =====================================
 
-  const filteredVegetables = vegetables.filter((item) =>
-    item.toLowerCase().includes(search.toLowerCase())
-  );
+  const increaseQty = (
+    index: number
+  ) => {
 
-  const filteredNonVeg = nonVeg.filter((item) =>
-    item.toLowerCase().includes(search.toLowerCase())
-  );
+    const updated = [...cart];
 
-  const renderItemButton = (item: string) => (
+    updated[index].quantity += 1;
 
-    <TouchableOpacity
-      key={item}
-      style={
-        item === selectedItem
-          ? styles.activeItem
-          : styles.itemButton
-      }
-      onPress={() => setSelectedItem(item)}
-    >
+    setCart(updated);
 
-      <Text
-        style={
-          item === selectedItem
-            ? styles.activeItemText
-            : styles.itemText
-        }
-      >
-        {item.toUpperCase()}
-      </Text>
+  };
 
-    </TouchableOpacity>
+  const decreaseQty = (
+    index: number
+  ) => {
 
-  );
+    const updated = [...cart];
+
+    updated[index].quantity -= 1;
+
+    const filtered =
+      updated.filter(
+        (i) => i.quantity > 0
+      );
+
+    setCart(filtered);
+
+  };
+
+  const removeItem = (
+    index: number
+  ) => {
+
+    const updated =
+      cart.filter(
+        (_, i) => i !== index
+      );
+
+    setCart(updated);
+
+  };
+
+  // =====================================
+  // BUY LINKS
+  // =====================================
+
+  const getStoreLink = (
+    store: string
+  ) => {
+
+    switch (store) {
+
+      case "BigBasket":
+        return `https://www.bigbasket.com/ps/?q=${selectedItem}`;
+
+      case "Blinkit":
+        return `https://blinkit.com/s/?q=${selectedItem}`;
+
+      case "Zepto":
+        return `https://www.zeptonow.com/search?query=${selectedItem}`;
+
+      case "Instamart":
+        return `https://www.swiggy.com/instamart/search?query=${selectedItem}`;
+
+      default:
+        return `https://www.google.com/search?q=${selectedItem}`;
+
+    }
+
+  };
+
+  // =====================================
+  // LOADING
+  // =====================================
+
+  if (loading) {
+
+    return (
+
+      <View style={styles.center}>
+
+        <ActivityIndicator
+          size="large"
+          color="#10b981"
+        />
+
+        <Text style={styles.loadingText}>
+          Loading AI Grocery Data...
+        </Text>
+
+      </View>
+
+    );
+
+  }
+
+  // =====================================
+  // UI
+  // =====================================
 
   return (
 
@@ -218,374 +594,496 @@ export default function HomeScreen() {
 
       <ScrollView style={styles.sidebar}>
 
-        <Text style={styles.sidebarMainTitle}>
-          🛒 Categories
+        <Text style={styles.logo}>
+          🛒 ARUNA AI
         </Text>
 
         <TextInput
-          placeholder="Search..."
-          placeholderTextColor="#999"
+          placeholder="Search item..."
+          placeholderTextColor="#94a3b8"
           style={styles.searchInput}
           value={search}
           onChangeText={setSearch}
         />
 
-        <Text style={styles.categoryTitle}>
-          🥫 Grocery
-        </Text>
+        {filteredCategories.map(
+          (
+            {
+              category,
+              items,
+            }: any,
+            index: number
+          ) => (
 
-        {filteredGrocery.map(renderItemButton)}
+            <View key={index}>
 
-        <Text style={styles.categoryTitle}>
-          🥦 Vegetables
-        </Text>
+              <Text
+                style={
+                  styles.categoryTitle
+                }
+              >
+                {category}
+              </Text>
 
-        {filteredVegetables.map(renderItemButton)}
+              {items.map(
+                (
+                  item: string,
+                  idx: number
+                ) => (
 
-        <Text style={styles.categoryTitle}>
-          🍗 Non-Veg
-        </Text>
+                  <TouchableOpacity
+                    key={idx}
+                    style={
+                      item ===
+                      selectedItem
+                        ? styles.activeItem
+                        : styles.itemButton
+                    }
+                    onPress={() =>
+                      setSelectedItem(
+                        item
+                      )
+                    }
+                  >
 
-        {filteredNonVeg.map(renderItemButton)}
+                    <Text
+                      style={
+                        styles.itemText
+                      }
+                    >
+                      {item.toUpperCase()}
+                    </Text>
+
+                  </TouchableOpacity>
+
+                )
+              )}
+
+            </View>
+
+          )
+        )}
 
       </ScrollView>
 
-      {/* MAIN UI */}
+      {/* MAIN */}
 
       <ScrollView style={styles.container}>
 
         <Text style={styles.title}>
-          🛒 Aruna-AI-Grocery
+          🤖 AI Grocery Intelligence
         </Text>
 
         <Text style={styles.subtitle}>
-          Grocery Price Comparison
+          Live grocery comparison
         </Text>
 
-        {/* BEST PRICE */}
+        <Text style={styles.updated}>
+          Updated: {lastUpdated}
+        </Text>
 
-        <View style={styles.bestPriceCard}>
+        {/* SUMMARY */}
 
-          <Text style={styles.bestPriceTitle}>
-            🔥 Today's Best Price
-          </Text>
+        <View style={styles.summaryRow}>
 
-          <Text style={styles.bestPriceValue}>
-            ₹ {lowestPrice}
-          </Text>
+          <View style={styles.summaryCard}>
 
-          <Text style={styles.bestPriceStore}>
-            on {cheapest.store}
-          </Text>
+            <Text style={styles.summaryLabel}>
+              Lowest Price
+            </Text>
+
+            <Text style={styles.summaryValue}>
+              ₹{lowestPrice}
+            </Text>
+
+          </View>
+
+          <View style={styles.summaryCard}>
+
+            <Text style={styles.summaryLabel}>
+              Savings
+            </Text>
+
+            <Text style={styles.summaryValue}>
+              ₹{savings}
+            </Text>
+
+          </View>
+
+          <View style={styles.summaryCard}>
+
+            <Text style={styles.summaryLabel}>
+              Platforms
+            </Text>
+
+            <Text style={styles.summaryValue}>
+              {stores.length}
+            </Text>
+
+          </View>
 
         </View>
+
+        {/* REFRESH BUTTON */}
+
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={fetchPrices}
+        >
+
+          <Text style={styles.refreshText}>
+            🔄 Refresh Prices
+          </Text>
+
+        </TouchableOpacity>
 
         {/* BAR CHART */}
 
-        <BarChart
+        <Text style={styles.sectionTitle}>
+          📊 Store Comparison
+        </Text>
+
+        {stores.length > 0 && (
+
+          <BarChart
+            data={{
+              labels: stores.map(
+                (s: any) =>
+                  s.store
+              ),
+              datasets: [
+                {
+                  data: stores.map(
+                    (s: any) =>
+                      Number(
+                        s.price
+                      )
+                  ),
+                },
+              ],
+            }}
+            width={
+              Dimensions.get(
+                "window"
+              ).width - 140
+            }
+            height={250}
+            yAxisLabel="₹"
+            chartConfig={{
+              backgroundGradientFrom:
+                "#ffffff",
+              backgroundGradientTo:
+                "#ffffff",
+              decimalPlaces: 0,
+              color: (
+                opacity = 1
+              ) =>
+                `rgba(16,185,129,${opacity})`,
+              labelColor: () =>
+                "#111827",
+            }}
+            style={{
+              borderRadius: 18,
+              marginVertical: 12,
+            }}
+          />
+
+        )}
+
+        {/* TREND */}
+
+        <Text style={styles.sectionTitle}>
+          📈 AI Trend Prediction
+        </Text>
+
+        <LineChart
           data={{
-            labels: stores.map((s: any) => s.store),
+            labels: [
+              "D1",
+              "D2",
+              "D3",
+              "D4",
+              "D5",
+              "D6",
+              "D7",
+            ],
             datasets: [
               {
-                data: stores.map((s: any) => s.price),
+                data: trendData,
               },
             ],
           }}
-          width={Dimensions.get("window").width - 130}
-          height={190}
+          width={
+            Dimensions.get(
+              "window"
+            ).width - 140
+          }
+          height={240}
           yAxisLabel="₹"
           chartConfig={{
-            backgroundGradientFrom: "#ffffff",
-            backgroundGradientTo: "#ffffff",
+            backgroundGradientFrom:
+              "#ffffff",
+            backgroundGradientTo:
+              "#ffffff",
             decimalPlaces: 0,
-            color: (opacity = 1) =>
-              `rgba(34, 197, 94, ${opacity})`,
-            labelColor: () => "#111827",
+            color: (
+              opacity = 1
+            ) =>
+              `rgba(59,130,246,${opacity})`,
+            labelColor: () =>
+              "#111827",
           }}
-          style={{
-            borderRadius: 16,
-            marginVertical: 10,
-          }}
+          bezier
         />
 
-        {/* AI MARKET */}
+        {/* AI BOX */}
 
-        <View style={styles.marketBox}>
+        <View style={styles.aiBox}>
 
-          <Text style={styles.marketTitle}>
-            📊 AI Market Analysis
+          <Text style={styles.aiTitle}>
+            🤖 AI Recommendation
           </Text>
 
-          <Text style={styles.marketText}>
-            {selectedItem.toUpperCase()} prices are currently{" "}
-            {savings > 100
-              ? "highly volatile"
-              : "stable"} across stores.
+          <Text>
+            🏪 Best Store:
+            {" "}
+            {cheapest?.store || "N/A"}
           </Text>
 
-          <Text style={styles.marketText}>
-            Best value currently available on{" "}
-            {cheapest.store}.
+          <Text>
+            💰 Predicted Price:
+            {" "}
+            ₹
+            {cheapest?.prediction || 0}
+          </Text>
+
+          <Text>
+            🎯 Confidence:
+            {" "}
+            {cheapest?.confidence || 0}
+            %
+          </Text>
+
+          <Text>
+            📈 Demand Score:
+            {" "}
+            {cheapest?.demand_score || 0}
+          </Text>
+
+          <Text>
+            🚚 Delivery:
+            {" "}
+            {cheapest?.delivery || 0}
+            mins
+          </Text>
+
+          <Text>
+            ⭐ Rating:
+            {" "}
+            {cheapest?.rating || 0}
           </Text>
 
         </View>
 
-        {/* ITEM CARD */}
+        {/* STORE LIST */}
 
         <View style={styles.card}>
 
-          <Text style={styles.selectedTitle}>
+          <Text style={styles.itemTitle}>
             {selectedItem.toUpperCase()}
           </Text>
 
-          {stores.map((store: any, i: number) => (
+          {stores.map(
+            (
+              store: any,
+              index: number
+            ) => (
 
-            <View key={i} style={styles.cardRow}>
+              <View
+                key={index}
+                style={styles.cardRow}
+              >
 
-              {/* LEFT */}
+                <View>
 
-              <View>
-
-                <Text style={styles.store}>
-                  {store.store === "BigBasket"
-                    ? "🛒 BigBasket"
-                    : "⚡ Blinkit"}
-                </Text>
-
-                <Text style={styles.delivery}>
-                  🚚 Delivery in {store.delivery} mins
-                </Text>
-
-                <Text
-                  style={
-                    store.stock === "In Stock"
-                      ? styles.stockGreen
-                      : styles.stockRed
-                  }
-                >
-                  {store.stock === "In Stock"
-                    ? "🟢 In Stock"
-                    : "🔴 Low Stock"}
-                </Text>
-
-                <Text
-                  style={
-                    store.trend === "Price Dropped"
-                      ? styles.priceDrop
-                      : styles.highDemand
-                  }
-                >
-                  {store.trend === "Price Dropped"
-                    ? "📉 Price Dropped"
-                    : "🔥 High Demand"}
-                </Text>
-
-                <Text style={styles.rating}>
-                  ⭐ {store.rating} Rating
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => {
-
-                    const url =
-                      store.store === "BigBasket"
-                        ? `https://www.bigbasket.com/ps/?q=${selectedItem}`
-                        : `https://blinkit.com/s/?q=${selectedItem}`;
-
-                    Linking.openURL(url);
-
-                  }}
-                >
-
-                  <Text style={styles.buyLink}>
-                    🛍️ Buy Now
+                  <Text style={styles.store}>
+                    {store.store}
                   </Text>
 
-                </TouchableOpacity>
+                  <Text>
+                    🚚 Delivery:
+                    {" "}
+                    {store.delivery}
+                    mins
+                  </Text>
+
+                  <Text>
+                    ⭐ Rating:
+                    {" "}
+                    {store.rating}
+                  </Text>
+
+                  <Text>
+                    📦
+                    {" "}
+                    {store.stock}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      Linking.openURL(
+                        getStoreLink(
+                          store.store
+                        )
+                      )
+                    }
+                  >
+
+                    <Text style={styles.buy}>
+                      🛒 Buy Now
+                    </Text>
+
+                  </TouchableOpacity>
+
+                </View>
+
+                <View>
+
+                  <Text style={styles.price}>
+                    ₹ {store.price}
+                  </Text>
+
+                  {store.store ===
+                    cheapest?.store && (
+
+                    <Text
+                      style={
+                        styles.bestDeal
+                      }
+                    >
+                      🏆 BEST DEAL
+                    </Text>
+
+                  )}
+
+                </View>
 
               </View>
 
-              {/* RIGHT */}
-
-              <View style={{ alignItems: "flex-end" }}>
-
-                <Text
-                  style={
-                    store.store === cheapest.store
-                      ? styles.cheapestPrice
-                      : styles.price
-                  }
-                >
-                  ₹ {store.price}
-                </Text>
-
-                {store.store === cheapest.store && (
-                  <Text style={styles.bestDeal}>
-                    🏆 BEST DEAL
-                  </Text>
-                )}
-
-                {store.delivery < 10 && (
-                  <Text style={styles.fastDelivery}>
-                    ⚡ Fastest Delivery
-                  </Text>
-                )}
-
-                {store.price === lowestPrice && (
-                  <Text style={styles.smartBuy}>
-                    💡 Smart Buy Alert
-                  </Text>
-                )}
-
-              </View>
-
-            </View>
-
-          ))}
-
-          <Text style={styles.cheapest}>
-            🏆 Cheapest: {cheapest.store}
-          </Text>
-
-          <Text style={styles.savings}>
-            💰 Save ₹{savings}
-          </Text>
-
-          {/* ADD CART */}
+            )
+          )}
 
           <TouchableOpacity
             style={styles.cartButton}
             onPress={addToCart}
           >
 
-            <Text style={styles.cartButtonText}>
-              🛒 Add To Cart
+            <Text
+              style={
+                styles.cartButtonText
+              }
+            >
+              ➕ Add To Cart
             </Text>
 
           </TouchableOpacity>
 
-          {/* AI */}
+        </View>
 
-          <View style={styles.aiBox}>
+        {/* CART */}
 
-            <Text style={styles.aiText}>
-              🤖 AI Suggestion
+        <View style={styles.cartBox}>
+
+          <Text style={styles.cartTitle}>
+            🛍️ Shopping Cart
+          </Text>
+
+          {cart.length === 0 && (
+
+            <Text>
+              No items added
             </Text>
 
-            <Text style={styles.aiSubText}>
-              Buy {selectedItem.toUpperCase()} from{" "}
-              {cheapest.store} and save ₹{savings}
-            </Text>
+          )}
 
-          </View>
+          {cart.map(
+            (
+              item: any,
+              index: number
+            ) => (
 
-          {/* CART */}
-
-          <View style={styles.cartBox}>
-
-            <Text style={styles.cartTitle}>
-              🛍️ Shopping Cart
-            </Text>
-
-            {cart.length === 0 && (
-
-              <Text style={styles.emptyCart}>
-                No items added yet
-              </Text>
-
-            )}
-
-            {cart.map((item, index) => (
-
-              <View key={index} style={styles.cartRow}>
+              <View
+                key={index}
+                style={styles.cartRow}
+              >
 
                 <View>
 
-                  <Text style={styles.cartItem}>
+                  <Text
+                    style={
+                      styles.cartItem
+                    }
+                  >
                     {item.item.toUpperCase()}
                   </Text>
 
-                  <Text style={styles.cartStore}>
+                  <Text>
                     🏪 {item.store}
-                  </Text>
-
-                  <Text style={styles.quantityText}>
-                    Qty: {item.quantity}
                   </Text>
 
                 </View>
 
-                <View style={styles.cartRight}>
+                <View
+                  style={
+                    styles.cartRight
+                  }
+                >
 
-                  <Text style={styles.cartPrice}>
-                    ₹ {item.price * item.quantity}
+                  <Text
+                    style={
+                      styles.cartPrice
+                    }
+                  >
+                    ₹
+                    {item.price *
+                      item.quantity}
                   </Text>
 
-                  <View style={styles.qtyButtons}>
+                  <View
+                    style={
+                      styles.qtyButtons
+                    }
+                  >
 
                     <TouchableOpacity
-                      style={styles.qtyBtn}
-                      onPress={() => {
-
-                        const updated = cart.map(
-                          (cartItem, i) => {
-
-                            if (i === index) {
-
-                              return {
-                                ...cartItem,
-                                quantity:
-                                  cartItem.quantity + 1,
-                              };
-
-                            }
-
-                            return cartItem;
-
-                          }
-                        );
-
-                        setCart(updated);
-
-                      }}
+                      style={
+                        styles.qtyBtn
+                      }
+                      onPress={() =>
+                        increaseQty(
+                          index
+                        )
+                      }
                     >
 
-                      <Text style={styles.qtyText}>
+                      <Text>
                         +
                       </Text>
 
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.qtyBtn}
-                      onPress={() => {
-
-                        const updated = cart
-                          .map((cartItem, i) => {
-
-                            if (i === index) {
-
-                              return {
-                                ...cartItem,
-                                quantity:
-                                  cartItem.quantity - 1,
-                              };
-
-                            }
-
-                            return cartItem;
-
-                          })
-                          .filter(
-                            (item) => item.quantity > 0
-                          );
-
-                        setCart(updated);
-
-                      }}
+                      style={
+                        styles.qtyBtn
+                      }
+                      onPress={() =>
+                        decreaseQty(
+                          index
+                        )
+                      }
                     >
 
-                      <Text style={styles.qtyText}>
+                      <Text>
                         -
                       </Text>
 
@@ -594,21 +1092,22 @@ export default function HomeScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => {
-
-                      const updated =
-                        cart.filter(
-                          (_, i) => i !== index
-                        );
-
-                      setCart(updated);
-
-                    }}
+                    style={
+                      styles.deleteBtn
+                    }
+                    onPress={() =>
+                      removeItem(
+                        index
+                      )
+                    }
                   >
 
-                    <Text style={styles.deleteText}>
-                      ❌ Remove
+                    <Text
+                      style={
+                        styles.deleteText
+                      }
+                    >
+                      Remove
                     </Text>
 
                   </TouchableOpacity>
@@ -617,24 +1116,14 @@ export default function HomeScreen() {
 
               </View>
 
-            ))}
+            )
+          )}
 
-            {cart.length > 0 && (
-
-              <Text style={styles.totalPrice}>
-                Total ₹ {
-                  cart.reduce(
-                    (sum, item) =>
-                      sum +
-                      item.price * item.quantity,
-                    0
-                  )
-                }
-              </Text>
-
-            )}
-
-          </View>
+          <Text style={styles.total}>
+            Total Amount:
+            {" "}
+            ₹{totalAmount}
+          </Text>
 
         </View>
 
@@ -643,6 +1132,7 @@ export default function HomeScreen() {
     </View>
 
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -650,142 +1140,143 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#eef2ff",
   },
 
   sidebar: {
-    width: "22%",
+    width: "24%",
     backgroundColor: "#0f172a",
-    paddingTop: 20,
-    paddingHorizontal: 6,
+    padding: 12,
   },
 
   container: {
-    width: "78%",
-    padding: 10,
+    width: "76%",
+    padding: 12,
   },
 
-  sidebarMainTitle: {
+  logo: {
     color: "white",
-    fontSize: 11,
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 12,
     textAlign: "center",
+    marginBottom: 16,
   },
 
   searchInput: {
-    backgroundColor: "white",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    fontSize: 10,
+    backgroundColor: "#1e293b",
+    color: "white",
+    borderRadius: 12,
+    padding: 10,
     marginBottom: 12,
   },
 
   categoryTitle: {
     color: "#22c55e",
-    fontSize: 11,
     fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 6,
+    marginTop: 12,
+    marginBottom: 8,
   },
 
   itemButton: {
     backgroundColor: "#334155",
-    padding: 7,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
     marginBottom: 6,
   },
 
   activeItem: {
     backgroundColor: "#10b981",
-    padding: 7,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
     marginBottom: 6,
   },
 
   itemText: {
     color: "white",
-    textAlign: "center",
     fontWeight: "bold",
-    fontSize: 9,
-  },
-
-  activeItemText: {
-    color: "white",
     textAlign: "center",
-    fontWeight: "bold",
-    fontSize: 9,
   },
 
   title: {
-    fontSize: 22,
+    fontSize: 30,
     fontWeight: "bold",
-    marginTop: 15,
   },
 
   subtitle: {
     color: "#64748b",
-    marginBottom: 12,
-    fontSize: 12,
   },
 
-  bestPriceCard: {
-    backgroundColor: "#111827",
-    padding: 15,
-    borderRadius: 16,
-    marginBottom: 15,
-  },
-
-  bestPriceTitle: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-
-  bestPriceValue: {
-    color: "#22c55e",
-    fontSize: 30,
-    fontWeight: "bold",
-    marginTop: 6,
-  },
-
-  bestPriceStore: {
-    color: "white",
+  updated: {
     marginTop: 4,
+    marginBottom: 14,
+    color: "#64748b",
   },
 
-  marketBox: {
-    backgroundColor: "#ecfeff",
-    padding: 14,
-    borderRadius: 14,
-    marginTop: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#06b6d4",
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
 
-  marketTitle: {
-    fontSize: 15,
+  summaryCard: {
+    backgroundColor: "white",
+    width: "31%",
+    padding: 16,
+    borderRadius: 16,
+  },
+
+  summaryLabel: {
+    color: "#64748b",
+  },
+
+  summaryValue: {
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 6,
+    color: "#10b981",
   },
 
-  marketText: {
-    color: "#334155",
-    marginTop: 2,
+  refreshBtn: {
+    backgroundColor: "#2563eb",
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  refreshText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+
+  aiBox: {
+    backgroundColor: "#ecfeff",
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+
+  aiTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
 
   card: {
     backgroundColor: "white",
-    padding: 15,
-    borderRadius: 16,
-    elevation: 4,
-    marginBottom: 40,
+    padding: 18,
+    borderRadius: 20,
+    marginBottom: 20,
   },
 
-  selectedTitle: {
-    fontSize: 22,
+  itemTitle: {
+    fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
@@ -794,182 +1285,70 @@ const styles = StyleSheet.create({
   cardRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
     paddingBottom: 12,
-    marginBottom: 14,
+    marginBottom: 12,
   },
 
   store: {
-    fontSize: 14,
     fontWeight: "bold",
+    fontSize: 18,
   },
 
-  delivery: {
-    color: "#475569",
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  stockGreen: {
-    color: "green",
-    fontSize: 11,
-    fontWeight: "bold",
-    marginTop: 3,
-  },
-
-  stockRed: {
-    color: "red",
-    fontSize: 11,
-    fontWeight: "bold",
-    marginTop: 3,
-  },
-
-  priceDrop: {
-    color: "green",
-    fontWeight: "bold",
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  highDemand: {
-    color: "#dc2626",
-    fontWeight: "bold",
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  rating: {
-    color: "#f59e0b",
-    fontWeight: "bold",
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  buyLink: {
-    marginTop: 5,
+  buy: {
     color: "#2563eb",
     fontWeight: "bold",
-    fontSize: 11,
+    marginTop: 6,
   },
 
   price: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "black",
-  },
-
-  cheapestPrice: {
-    fontSize: 20,
-    fontWeight: "bold",
     color: "green",
+    fontWeight: "bold",
+    fontSize: 28,
   },
 
   bestDeal: {
-    marginTop: 4,
     color: "orange",
     fontWeight: "bold",
-    fontSize: 10,
-  },
-
-  fastDelivery: {
-    color: "#f59e0b",
-    fontWeight: "bold",
-    fontSize: 10,
-    marginTop: 3,
-  },
-
-  smartBuy: {
-    color: "#2563eb",
-    fontWeight: "bold",
-    fontSize: 10,
-    marginTop: 3,
-  },
-
-  cheapest: {
-    color: "#2563eb",
-    fontWeight: "bold",
-    fontSize: 16,
-    marginTop: 10,
-  },
-
-  savings: {
-    color: "green",
-    fontWeight: "bold",
-    fontSize: 18,
-    marginTop: 6,
   },
 
   cartButton: {
     backgroundColor: "#10b981",
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     alignItems: "center",
-    marginTop: 18,
+    marginTop: 14,
   },
 
   cartButtonText: {
     color: "white",
     fontWeight: "bold",
-  },
-
-  aiBox: {
-    backgroundColor: "#ecfeff",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 18,
-    borderWidth: 1,
-    borderColor: "#06b6d4",
-  },
-
-  aiText: {
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-
-  aiSubText: {
-    color: "#334155",
+    fontSize: 16,
   },
 
   cartBox: {
-    marginTop: 20,
-    backgroundColor: "#f8fafc",
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: "white",
+    padding: 18,
+    borderRadius: 20,
+    marginBottom: 40,
   },
 
   cartTitle: {
+    fontSize: 22,
     fontWeight: "bold",
-    fontSize: 17,
-    marginBottom: 12,
-  },
-
-  emptyCart: {
-    color: "#64748b",
+    marginBottom: 14,
   },
 
   cartRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingBottom: 10,
-    marginBottom: 12,
+    marginBottom: 14,
   },
 
   cartItem: {
     fontWeight: "bold",
-  },
-
-  cartStore: {
-    color: "#64748b",
-    marginTop: 2,
-  },
-
-  quantityText: {
-    color: "#475569",
-    marginTop: 3,
+    fontSize: 16,
   },
 
   cartRight: {
@@ -979,7 +1358,7 @@ const styles = StyleSheet.create({
   cartPrice: {
     color: "green",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 18,
   },
 
   qtyButtons: {
@@ -988,8 +1367,8 @@ const styles = StyleSheet.create({
   },
 
   qtyBtn: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     backgroundColor: "#10b981",
     borderRadius: 8,
     justifyContent: "center",
@@ -997,31 +1376,29 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  qtyText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-
-  deleteButton: {
+  deleteBtn: {
     backgroundColor: "#ef4444",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
   },
 
   deleteText: {
     color: "white",
     fontWeight: "bold",
-    fontSize: 11,
   },
 
-  totalPrice: {
-    fontSize: 18,
+  total: {
+    fontSize: 22,
     fontWeight: "bold",
     color: "#2563eb",
-    marginTop: 10,
+    marginTop: 12,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontWeight: "bold",
   },
 
   center: {

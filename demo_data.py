@@ -1,55 +1,66 @@
-
 import pandas as pd
 import random
 from datetime import datetime
 
+items = [
 
-def create_demo_data():
-
-    items = [
-        "rice",
-    "wheat",
-    "dal",
+    "rice",
     "milk",
-    "eggs",
     "bread",
+    "eggs",
     "tea",
     "coffee",
     "sugar",
     "salt",
+    "dal",
+    "oil",
     "apple",
     "banana",
-    "orange",
     "potato",
     "tomato",
     "onion",
-    "carrot",
     "chicken",
-    "paneer"
-    ]
+    "paneer",
+    "juice",
+    "chips",
+    "soap"
 
-    stores = [
-        "BigBasket",
-        "Blinkit"
-    ]
+]
 
-    rows = []
+stores = [
+    "BigBasket",
+    "Blinkit"
+]
 
-    for item in items:
+rows = []
 
-        for store in stores:
+for item in items:
 
-            rows.append({
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "item": item,
-                "store": store,
-                "price": random.randint(20, 300)
-            })
+    for store in stores:
 
-    df = pd.DataFrame(rows)
+        base = random.randint(20, 300)
 
-    df.to_csv(
-        "store_prices.csv",
-        index=False
-    )
+        rows.append({
 
+            "time":
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+
+            "item": item,
+
+            "store": store,
+
+            "price": base
+
+        })
+
+df = pd.DataFrame(rows)
+
+df.to_csv(
+    "store_prices.csv",
+    index=False
+)
+
+print("✅ Demo data created")
+print(df.head())

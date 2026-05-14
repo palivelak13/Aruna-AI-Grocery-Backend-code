@@ -1,23 +1,49 @@
 from groq_client import ask_groq
+import json
+
 
 def evaluate(data):
+
     prompt = f"""
-    Evaluate grocery price data quality.
+You are an AI grocery validator.
 
-    Score from 0 to 100 based on:
-    - completeness
-    - correctness
-    - realistic prices
+Analyze grocery pricing data.
 
-    Return only number.
+Check:
+- fake prices
+- unrealistic prices
+- missing fields
+- duplicates
+- quality
 
-    Data:
-    {data}
-    """
+Return JSON only:
 
-    result = ask_groq(prompt)
+{{
+  "score": 95,
+  "status": "GOOD",
+  "issues": []
+}}
+
+Data:
+{json.dumps(data)}
+"""
 
     try:
-        return float(result)
-    except:
-        return 50.0
+
+        result = ask_groq(prompt)
+
+        parsed = json.loads(result)
+
+        return parsed
+
+    except Exception as e:
+
+        return {
+
+            "score": 50,
+
+            "status": "UNKNOWN",
+
+            "issues": [str(e)]
+
+        }
